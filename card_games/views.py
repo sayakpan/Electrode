@@ -1,3 +1,10 @@
-from django.shortcuts import render
+from django.http import JsonResponse
+from django.views import View
+from .models import Card
+from .serializers import CardSerializer
 
-# Create your views here.
+class CardListView(View):
+    def get(self, request, *args, **kwargs):
+        cards = Card.objects.all()
+        serializer = CardSerializer(cards, many=True)
+        return JsonResponse(serializer.data, safe=False)

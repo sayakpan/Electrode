@@ -7,7 +7,7 @@ class GameAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'updated_at']
 
 class CardAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'short_name', 'suit']
+    list_display = ['id', 'name', 'code', 'short_name', 'suit']
     search_fields = ['suit']
 
 class GameConfigAdmin(admin.ModelAdmin):
