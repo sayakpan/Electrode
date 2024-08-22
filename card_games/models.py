@@ -20,6 +20,7 @@ class Card(models.Model):
 
 class Game(models.Model):
     name = models.CharField(max_length=50, null=False, blank=False)
+    cover = models.ImageField(upload_to='game_images/', null=True, blank=True)
     game_state = models.JSONField(default=dict, blank=True, null=True)
     minimum_number_of_players = models.IntegerField(default=0)
     game_cards = models.ManyToManyField(Card, related_name='game_cards')
