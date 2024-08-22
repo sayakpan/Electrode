@@ -17,7 +17,7 @@ class GameRoom(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='created_rooms', on_delete=models.CASCADE)
     players = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='game_rooms')
-    game_playing = models.OneToOneField('card_games.Game', on_delete=models.DO_NOTHING, null=True)
+    game_playing = models.OneToOneField('card_games.Game', on_delete=models.DO_NOTHING, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -25,4 +25,3 @@ class GameRoom(models.Model):
     class Meta:
         verbose_name = 'Game Room'
         verbose_name_plural = 'Game Rooms'
-

@@ -6,5 +6,5 @@ from .serializers import CardSerializer
 class CardListView(View):
     def get(self, request, *args, **kwargs):
         cards = Card.objects.all()
-        serializer = CardSerializer(cards, many=True)
+        serializer = CardSerializer(cards, many=True, context={'request': request})
         return JsonResponse(serializer.data, safe=False)

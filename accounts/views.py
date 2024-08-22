@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .serializers import RegisterSerializer, UserSerializer, TokenSerializer
+from accounts.models import GameProfile
+from .serializers import GameProfileSerializer, RegisterSerializer, UserSerializer
 from rest_framework.permissions import AllowAny
 
 
@@ -17,10 +18,21 @@ class RegisterAPIView(APIView):
         try:
             if serializer.is_valid():
                 user = serializer.save()
+
+                # Create GameProfile for the new user
+                profile = GameProfile.objects.create(user=user, name=user.first_name)
+
+                # Generate or retrieve token for the user
                 token, created = Token.objects.get_or_create(user=user)
+
+                # Serialize the user and profile data
+                user_data = UserSerializer(user).data
+                profile_data = GameProfileSerializer(profile).data
+
                 return Response({
-                    'user_created': 'true',
-                    'token': token.key
+                    'token': token.key,
+                    'user': user_data,
+                    'profile': profile_data
                 }, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except IntegrityError:
@@ -36,5 +48,12 @@ class LoginAPIView(APIView):
         if user is None:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
+        user_data = {
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key}, status=status.HTTP_200_OK)
+        return Response({'token': token.key, 'user': user_data}, status=status.HTTP_200_OK)
