@@ -25,7 +25,7 @@ class GameSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Game
-        fields = ['name', 'cover', 'minimum_number_of_players']
+        fields = ['id', 'name', 'cover', 'minimum_number_of_players']
 
     def get_cover(self, obj):
         request = self.context.get('request')

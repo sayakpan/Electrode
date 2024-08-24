@@ -55,5 +55,13 @@ class LoginAPIView(APIView):
             'last_name': user.last_name,
         }
 
+        profile = GameProfile.objects.get(user=user)
+
+        profile_data = GameProfileSerializer(profile).data
+
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key, 'user': user_data}, status=status.HTTP_200_OK)
+        return Response({
+            'token': token.key, 
+            'user': user_data,
+            'profile':profile_data,
+        }, status=status.HTTP_200_OK)
