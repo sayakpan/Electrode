@@ -2,16 +2,16 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
-from .models import GameProfile
+from .models import Profile
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name']
 
-class GameProfileSerializer(serializers.ModelSerializer):
+class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = GameProfile
+        model = Profile
         fields = ['name', 'image', 'last_online', 'saved_rooms']
 
 class RegisterSerializer(serializers.ModelSerializer):

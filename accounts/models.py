@@ -4,7 +4,7 @@ from django.utils import timezone
 from rooms.models import GameRoom
 
 
-class GameProfile(models.Model):
+class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     name = models.CharField(max_length=255, null=True, blank=True)
     image = models.ImageField(upload_to='profile_images/', null=True, blank=True)

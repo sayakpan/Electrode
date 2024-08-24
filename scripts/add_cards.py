@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Electrode.settings')
 django.setup()
 
-from card_games.models import Card
+from resources.models import Card
 
 suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
 names = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']

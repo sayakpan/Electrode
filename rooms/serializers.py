@@ -9,7 +9,7 @@ class GameRoomSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GameRoom
-        fields = ['id', 'unique_id', 'passkey', 'name', 'created_at', 'created_by', 'players', 'game_playing']
+        fields = ['id', 'unique_id', 'passkey', 'name', 'created_at', 'created_by', 'players']
         read_only_fields = ['id', 'unique_id', 'passkey', 'created_at', 'created_by', 'players']
 
     def create(self, validated_data):

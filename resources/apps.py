@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class CardGamesConfig(AppConfig):
+class ResourcesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'card_games'
+    name = 'resources'

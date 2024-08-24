@@ -7,7 +7,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/rooms/', include('rooms.urls')),
-    path('api/cardgames/', include('card_games.urls')),
+    path('api/resources/', include('resources.urls')),
+    path('api/twenty-nine/', include('twenty_nine.urls')),
 ]
 
 if settings.DEBUG:

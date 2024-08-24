@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'accounts',
     'rooms',
-    'card_games'
+    'resources',
+    'twenty_nine',
 ]
 
 MIDDLEWARE = [

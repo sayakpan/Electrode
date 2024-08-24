@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from accounts.models import GameProfile
-from .serializers import GameProfileSerializer, RegisterSerializer, UserSerializer
+from accounts.models import Profile
+from .serializers import ProfileSerializer, RegisterSerializer, UserSerializer
 from rest_framework.permissions import AllowAny
 
 
@@ -19,15 +19,15 @@ class RegisterAPIView(APIView):
             if serializer.is_valid():
                 user = serializer.save()
 
-                # Create GameProfile for the new user
-                profile = GameProfile.objects.create(user=user, name=user.first_name)
+                # Create Profile for the new user
+                profile = Profile.objects.create(user=user, name=user.first_name)
 
                 # Generate or retrieve token for the user
                 token, created = Token.objects.get_or_create(user=user)
 
                 # Serialize the user and profile data
                 user_data = UserSerializer(user).data
-                profile_data = GameProfileSerializer(profile).data
+                profile_data = ProfileSerializer(profile).data
 
                 return Response({
                     'token': token.key,
@@ -55,9 +55,9 @@ class LoginAPIView(APIView):
             'last_name': user.last_name,
         }
 
-        profile = GameProfile.objects.get(user=user)
+        profile = Profile.objects.get(user=user)
 
-        profile_data = GameProfileSerializer(profile).data
+        profile_data = ProfileSerializer(profile).data
 
         token, created = Token.objects.get_or_create(user=user)
         return Response({

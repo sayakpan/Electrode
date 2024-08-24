@@ -5,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Electrode.settings')
 django.setup()
 
-from card_games.models import Card
+from resources.models import Card
 
 # Paths to the directories containing the images
 png_dir = 'cards/png/'

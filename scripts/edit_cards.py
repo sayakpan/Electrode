@@ -5,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Electrode.settings')
 django.setup()
 
-from card_games.models import Card
+from resources.models import Card
 
 # Fetch all Card objects
 cards = Card.objects.all()
