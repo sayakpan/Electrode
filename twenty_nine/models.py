@@ -39,27 +39,30 @@ class Instances(models.Model):
     team_2_points = models.IntegerField(default=0, null=True, blank=True)
     team_1_status = models.CharField(max_length=255, null=True, blank=True)
     team_2_status = models.CharField(max_length=255, null=True, blank=True)
-    game_bid = models.IntegerField(default=16, null=True, blank=True)
-    bid_won_by = models.ForeignKey(Profile,on_delete=models.CASCADE, null=True, blank=True)
+    bid_won_by = models.ForeignKey(Profile, related_name='won_bid',on_delete=models.CASCADE, null=True, blank=True)
+    highest_bid = models.IntegerField(default=16, null=True, blank=True)
+    last_round_started_from = models.ForeignKey(Profile,on_delete=models.CASCADE, null=True, blank=True)
     trump_card = models.ForeignKey(Card,on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return f'{self.game} - {self.room}'
+        return f'Instance {self.id} - {self.game} {self.room}'
     
 class Bid(models.Model):
-    instance = models.ForeignKey(Instances, on_delete=models.CASCADE)
-    bid_winner = models.ForeignKey(Profile, on_delete=models.CASCADE)
-    points_bid = models.IntegerField()
-    players_who_pass = models.ManyToManyField(Profile,related_name='players_who_pass', blank=True)
+    instance = models.ForeignKey(Instances, related_name='game_bid', on_delete=models.CASCADE)
+    current_bidder = models.ForeignKey(Profile,on_delete=models.CASCADE, related_name="current", null=True, blank=True)
+    next_bidder = models.ForeignKey(Profile,on_delete=models.CASCADE, related_name="next", null=True, blank=True)
+    bid_winner = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, blank=True)
+    points_bid = models.IntegerField(default=16, null=True, blank=True)
 
     def __str__(self):
-        return f"Bid of {self.points_bid} by {self.team.name}"
+        return f"Bid of {self.points_bid} in Instance {self.instance.id}"
     
 class PlayerHand(models.Model):
     instance = models.ForeignKey(Instances, on_delete=models.CASCADE, related_name='hands')
     player = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='player_hand')
     cards_in_hand = models.ManyToManyField(CardConfiguration, related_name='cards_in_hand', blank=True)
     cards_played = models.ManyToManyField(CardConfiguration, related_name='cards_played', blank=True)
+    order = models.IntegerField(null=True, blank=True)
 
     def play_card(self, card):
         """Move a card from cards_in_hand to cards_played."""

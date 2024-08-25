@@ -11,7 +11,7 @@ class CardConfigurationAdmin(admin.ModelAdmin):
 
 @admin.register(Instances)
 class InstancesAdmin(admin.ModelAdmin):
-    list_display = ('game', 'room', 'team_1_points', 'team_2_points', 'game_bid', 'bid_won_by', 'trump_card')
+    list_display = ('game', 'room', 'team_1_points', 'team_2_points', 'bid_won_by', 'trump_card')
     filter_horizontal = ['team_1','team_2']
     raw_id_fields = ('game', 'room','bid_won_by')
 

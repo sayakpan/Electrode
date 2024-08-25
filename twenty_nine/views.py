@@ -25,6 +25,12 @@ class GameProfileAPIView(APIView):
 class StartGameAPIView(views.APIView):
     def post(self, request, room_id):
         game_id = request.data.get('game_id')
+        order = request.data.get('order')
+
+        # Check if 'order' array is provided and has the same number of players
+        if not order or len(order) != GameRoom.objects.get(unique_id=room_id).players.count():
+            return Response({'error': 'Invalid or missing order array'}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             room = GameRoom.objects.get(unique_id=room_id)
             game = GameProfile.objects.get(id=game_id)
@@ -39,7 +45,12 @@ class StartGameAPIView(views.APIView):
         # Create PlayerHand objects and distribute 4 cards to each player
         players = room.players.all()  
         for player in players:
-            player_hand = PlayerHand.objects.create(instance=instance, player=player)
+            try:
+                player_order = order.index(player.id)
+            except ValueError:
+                return Response({'error': f'Player {player.id} not found in order array'}, status=status.HTTP_400_BAD_REQUEST)
+
+            player_hand = PlayerHand.objects.create(instance=instance, player=player,order=player_order)
             cards = CardConfiguration.objects.order_by('?')[:4]  # Get 4 random cards
             player_hand.cards_in_hand.add(*cards)
         
@@ -58,6 +69,10 @@ class GetGameStatusAPIView(views.APIView):
             instance = Instances.objects.get(id=instance_id)
             player_hand = PlayerHand.objects.get(instance=instance, player=player)
 
+            # Serialize team_1 and team_2 profiles
+            team_1_profiles = self.serialize_profiles(instance.team_1.all())
+            team_2_profiles = self.serialize_profiles(instance.team_2.all())
+
             # Get details of the game instance
             game_data = {
                 'game': instance.game.name,
@@ -71,6 +86,25 @@ class GetGameStatusAPIView(views.APIView):
                 'trump_card': self.get_card_details(instance.trump_card) if instance.trump_card else None,
             }
 
+            # Determine which team the player belongs to
+            if player in instance.team_1.all():
+                your_team = 'team_1'
+                opponent_team = 'team_2'
+            elif player in instance.team_2.all():
+                your_team = 'team_2'
+                opponent_team = 'team_1'
+            else:
+                your_team = None
+                opponent_team = None
+
+            team_info = {
+                'your_team': your_team,
+                'opponent_team': opponent_team,
+                'your_profile': self.serialize_profile(player),
+                'team_1': team_1_profiles,
+                'team_2': team_2_profiles,
+            }
+
             # Get only the requesting player's cards with full details
             player_cards = {
                 'cards_in_hand': [self.get_complete_card_details(request, card) for card in player_hand.cards_in_hand.all()],
@@ -79,6 +113,7 @@ class GetGameStatusAPIView(views.APIView):
 
             return Response({
                 'game_data': game_data,
+                'team_info': team_info,
                 'player_cards': player_cards
             }, status=status.HTTP_200_OK)
 
@@ -87,6 +122,20 @@ class GetGameStatusAPIView(views.APIView):
         except PlayerHand.DoesNotExist:
             return Response({'error': 'Player not part of this game'}, status=status.HTTP_404_NOT_FOUND)
 
+    def serialize_profiles(self, profiles):
+        return [
+            {
+                'id': profile.id,
+                'name': profile.user.first_name,
+                'email': profile.user.email,
+            }
+            for profile in profiles
+        ]
+    
+    def serialize_profile(self, profile):
+        return {'id': profile.id,'name': profile.user.first_name,'email': profile.user.email,}
+           
+    
     def get_card_details(self, request, card):
         if card:
             return {
@@ -118,16 +167,128 @@ class GetGameStatusAPIView(views.APIView):
                 return None
         return None
 
-class BidAPIView(views.APIView):
+class StartBiddingAPIView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, instance_id):
-        instance = Instances.objects.get(id=instance_id)
-        profile = Profile.objects.get(id=request.data['profile_id'])
-        points_bid = request.data['points_bid']
+        try:
+            instance = Instances.objects.get(id=instance_id)
+            player_hands = PlayerHand.objects.filter(instance=instance).order_by('order')
 
-        # Create Bid object
-        Bid.objects.create(instance=instance, bid_winner=profile, points_bid=points_bid)
+            # Determine the starting bidder and the next bidder
+            if instance.last_round_started_from:
+                # Find the player hand of the player who started the last round
+                last_starting_hand = PlayerHand.objects.get(instance=instance, player=instance.last_round_started_from)
+                # Start bidding from the next player in order
+                current_bidder_order = (last_starting_hand.order + 1) % len(player_hands)
+            else:
+                # If no last round, start bidding from the first player in order
+                current_bidder_order = 0
 
-        return Response({'message': f'Bid of {points_bid} by {profile}'}, status=status.HTTP_201_CREATED)
+            # Determine the current bidder and the next bidder
+            current_bidder_hand = player_hands[current_bidder_order]
+            next_bidder_order = (current_bidder_order + 1) % len(player_hands)
+            next_bidder_hand = player_hands[next_bidder_order]
+
+            # Set up the first bid
+            bid = Bid.objects.create(
+                instance=instance,
+                current_bidder=current_bidder_hand.player,  # The player who is starting the bid
+                next_bidder=next_bidder_hand.player,        # The player who will bid next
+                points_bid=0  # Start with 0 or minimum bid
+            )
+
+            # Update the instance with the starting bidder and next bidder
+            instance.last_round_started_from = current_bidder_hand.player
+            instance.save()
+
+            return Response({
+                'message': 'Bidding started',
+                'current_bidder': current_bidder_hand.player.id,  
+                'next_bidder': next_bidder_hand.player.id,
+            }, status=status.HTTP_201_CREATED)
+
+        except Instances.DoesNotExist:
+            return Response({'error': 'Game instance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlayerHand.DoesNotExist:
+            return Response({'error': 'Player hand not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class PlaceBidAPIView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, instance_id):
+        try:
+            instance = Instances.objects.get(id=instance_id)
+            player_profile = Profile.objects.get(user=request.user)
+
+            # Get the player's current hand
+            player_hand = PlayerHand.objects.get(instance=instance, player=player_profile)
+
+            # Get the latest bid
+            latest_bid = Bid.objects.filter(instance=instance).last()
+
+            if not latest_bid:
+                return Response({'error': 'No active bidding round'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Extract bid details from request
+            bid_points = request.data.get('points_bid')
+            if bid_points is not None:
+                bid_points = int(bid_points)
+            else:
+                return Response({'error': 'Bid points not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if the player is the current bidder
+            if latest_bid.current_bidder != player_profile :
+                return Response({'error': 'Not your turn to bid'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Handle pass case
+            if bid_points == 0:
+                # Player passes
+                next_bidder_order = (player_hand.order + 1) % len(instance.room.players.all())
+                next_bidder_hand = PlayerHand.objects.filter(instance=instance).order_by('order')[next_bidder_order]
+                latest_bid.next_bidder = next_bidder_hand.player
+                latest_bid.save()
+
+                # Check if all players have passed
+                all_passed = not Bid.objects.filter(instance=instance, points_bid__gt=0).exists()
+                if all_passed:
+                    # End bidding, determine winner
+                    winning_bid = Bid.objects.filter(instance=instance).order_by('-points_bid').first()
+                    if winning_bid:
+                        instance.bid_won_by = winning_bid.bid_winner
+                        instance.highest_bid = winning_bid.points_bid
+                        instance.save()
+                    return Response({'message': 'Bidding ended. Winner determined.'}, status=status.HTTP_200_OK)
+
+                return Response({'message': 'Player passed. Next player is up.'}, status=status.HTTP_200_OK)
+
+            # Validate and update the bid
+            if bid_points <= latest_bid.points_bid:
+                return Response({'error': 'Bid must be higher than the current bid'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update current bid
+            latest_bid.points_bid = bid_points
+            latest_bid.bid_winner = player_profile
+            # latest_bid.next_bidder = PlayerHand.objects.filter(instance=instance).order_by('order')[(player_hand.order + 1) % len(instance.room.players.all())].player
+            # Swapping Current and Next after a bid
+            current = latest_bid.current_bidder
+            latest_bid.current_bidder = latest_bid.next_bidder
+            latest_bid.next_bidder = current
+            latest_bid.save()
+
+            return Response({
+                'message': 'Bid placed successfully',
+                'current_bidder': latest_bid.current_bidder.id,
+                'next_bidder': latest_bid.next_bidder.id,
+                'points_bid': latest_bid.points_bid
+            }, status=status.HTTP_200_OK)
+
+        except Instances.DoesNotExist:
+            return Response({'error': 'Game instance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlayerHand.DoesNotExist:
+            return Response({'error': 'Player hand not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Profile.DoesNotExist:
+            return Response({'error': 'Player profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class DistributeRemainingCardsAPIView(views.APIView):
     def post(self, request, instance_id):
