@@ -3,6 +3,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from accounts.models import Profile
 from .models import GameRoom
 from .serializers import GameRoomSerializer, JoinGameRoomSerializer
 from rest_framework.views import APIView
@@ -14,7 +15,8 @@ class GameRoomCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        profile = Profile.objects.get(user=self.request.user)
+        serializer.save(created_by=profile)
 
 class JoinGameRoomView(APIView):
     permission_classes = [IsAuthenticated]
@@ -23,7 +25,8 @@ class JoinGameRoomView(APIView):
         serializer = JoinGameRoomSerializer(data=request.data)
         if serializer.is_valid():
             game_room = serializer.validated_data['game_room']
-            game_room.players.add(request.user)
+            profile = Profile.objects.get(user=request.user)
+            game_room.players.add(profile)
 
             # Serialize the game room with the new player added
             game_room_serializer = GameRoomSerializer(game_room)

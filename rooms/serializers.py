@@ -1,11 +1,12 @@
 # serializers.py
 from rest_framework import serializers
-from accounts.serializers import UserSerializer
+from accounts.serializers import UserSerializer, ProfileSerializer
 from .models import GameRoom
+from accounts.models import Profile
 
 class GameRoomSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)  # Use UserSerializer to return full user details
-    players = UserSerializer(many=True, read_only=True)  # Use UserSerializer to return details of players
+    created_by = ProfileSerializer(read_only=True)  # Use UserSerializer to return full user details
+    players = ProfileSerializer(many=True, read_only=True)  # Use UserSerializer to return details of players
 
     class Meta:
         model = GameRoom
@@ -15,10 +16,14 @@ class GameRoomSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
-            user = request.user
-            validated_data['created_by'] = user
+            user_profile = Profile.objects.get(user=request.user)
+            validated_data['created_by'] = user_profile
+
         game_room = super().create(validated_data)
-        game_room.players.add(user)
+        
+        # Add the creator to the players list
+        game_room.players.add(user_profile)
+        
         return game_room
     
     def to_representation(self, instance):
@@ -34,7 +39,7 @@ class GameRoomSerializer(serializers.ModelSerializer):
                 admin_player = player
 
         if admin_player:
-            admin_player['first_name'] += ' (Admin)'
+            admin_player['name'] += ' (Admin)'
             players.remove(admin_player)
             players.insert(0, admin_player)
 
@@ -55,3 +60,4 @@ class JoinGameRoomSerializer(serializers.Serializer):
 
         data['game_room'] = game_room
         return data
+
