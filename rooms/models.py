@@ -17,9 +17,10 @@ class GameRoom(models.Model):
     passkey = models.CharField(max_length=6, default=generate_passkey, null=True)
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(Profile, related_name='created_rooms', on_delete=models.CASCADE)
+    created_by = models.ForeignKey(Profile, related_name='created_rooms', on_delete=models.DO_NOTHING)
     players = models.ManyToManyField(Profile, related_name='game_rooms')
     game_playing = models.OneToOneField('twenty_nine.GameProfile', on_delete=models.DO_NOTHING, null=True, blank=True)
+    is_playing = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

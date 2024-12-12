@@ -32,7 +32,7 @@ class CardConfiguration(models.Model):
 
 class Instances(models.Model):
     game = models.ForeignKey(GameProfile,on_delete=models.CASCADE,related_name='instance')
-    room = models.ForeignKey(GameRoom, on_delete=models.DO_NOTHING)
+    room = models.ForeignKey(GameRoom, on_delete=models.CASCADE)
     team_1 = models.ManyToManyField(Profile,related_name='team_1', blank=True)
     team_2 = models.ManyToManyField(Profile,related_name='team_2', blank=True)
     team_1_points = models.IntegerField(default=0, null=True, blank=True)

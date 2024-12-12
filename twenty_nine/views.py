@@ -3,6 +3,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework import status, views
 from utils import get_absolute_url
@@ -39,25 +40,113 @@ class StartGameAPIView(views.APIView):
         except GameProfile.DoesNotExist:
             return Response({'error': 'GameProfile not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        if room.players.count() != game.players_required:
+            return Response({
+                'error': f'The number of players must be {game.players_required} to start the game'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Assign the game to the room
+        room.game_playing = game
+        room.is_playing = True
+        room.save()
+
         # Create Instance
         instance = Instances.objects.create(game=game, room=room)
 
         # Create PlayerHand objects and distribute 4 cards to each player
         players = room.players.all()  
+        team_1 = []
+        team_2 = []
+
         for player in players:
             try:
                 player_order = order.index(player.id)
             except ValueError:
                 return Response({'error': f'Player {player.id} not found in order array'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Add player to team based on order
+            if player_order % 2 == 0:
+                team_1.append(player)
+            else:
+                team_2.append(player)
 
             player_hand = PlayerHand.objects.create(instance=instance, player=player,order=player_order)
             cards = CardConfiguration.objects.order_by('?')[:4]  # Get 4 random cards
             player_hand.cards_in_hand.add(*cards)
+
+        # Add players to the teams in the instance
+        instance.team_1.add(*team_1)
+        instance.team_2.add(*team_2)
         
         return Response({
-            'message': 'Game started and 4 cards distributed',
-            'instance_id': instance.id
+            'instance_id': instance.id,
+            'game': instance.game.name,
+            'room': instance.room.name,
+            'team_1_points': instance.team_1_points,
+            'team_2_points': instance.team_2_points,
+            'team_1_status': instance.team_1_status,
+            'team_2_status': instance.team_2_status,
+            'bid_won_by': str(instance.bid_won_by),
+            'trump_card': self.get_card_details(instance.trump_card) if instance.trump_card else None,
         }, status=status.HTTP_201_CREATED)
+    
+    def get_card_details(self, card):
+        if card:
+            return {
+                'name': card.name,
+                'suit': card.suit,
+                'code': card.code,
+                'short_name': card.short_name,
+                'image_url': card.image_url.url if card.image_url else None,
+                'svg_url': card.svg_url.url if card.svg_url else None
+            }
+        return None
+    
+class GetInstanceAPIView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, room_id):
+        try:        
+            try:
+                room = GameRoom.objects.get(unique_id=room_id)
+            except GameRoom.DoesNotExist:
+                return Response({'error': 'GameRoom not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            print(room)
+    
+            try:
+                instance = Instances.objects.get(room=room)
+            except Instances.DoesNotExist:
+                raise NotFound("Instance for the room not found.")
+        
+            return Response({
+                'instance_id': instance.id,
+                'game': instance.game.name,
+                'room': instance.room.name,
+                'team_1_points': instance.team_1_points,
+                'team_2_points': instance.team_2_points,
+                'team_1_status': instance.team_1_status,
+                'team_2_status': instance.team_2_status,
+                'bid_won_by': str(instance.bid_won_by),
+                'trump_card': self.get_card_details(instance.trump_card) if instance.trump_card else None,
+            }, status=status.HTTP_200_OK)
+
+        except GameRoom.DoesNotExist:
+            return Response({'error': 'GameRoom not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Instances.DoesNotExist:
+            return Response({'error': 'Game instance not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def get_card_details(self, card):
+        if card:
+            return {
+                'name': card.name,
+                'suit': card.suit,
+                'code': card.code,
+                'short_name': card.short_name,
+                'image_url': card.image_url.url if card.image_url else None,
+                'svg_url': card.svg_url.url if card.svg_url else None
+            }
+        return None
 
 class GetGameStatusAPIView(views.APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
@@ -73,6 +162,7 @@ class GetGameStatusAPIView(views.APIView):
             team_1_profiles = self.serialize_profiles(instance.team_1.all())
             team_2_profiles = self.serialize_profiles(instance.team_2.all())
 
+
             # Get details of the game instance
             game_data = {
                 'game': instance.game.name,
@@ -81,7 +171,6 @@ class GetGameStatusAPIView(views.APIView):
                 'team_2_points': instance.team_2_points,
                 'team_1_status': instance.team_1_status,
                 'team_2_status': instance.team_2_status,
-                'bid': instance.game_bid,
                 'bid_won_by': str(instance.bid_won_by),
                 'trump_card': self.get_card_details(instance.trump_card) if instance.trump_card else None,
             }
@@ -202,11 +291,19 @@ class StartBiddingAPIView(views.APIView):
             instance.last_round_started_from = current_bidder_hand.player
             instance.save()
 
+            def serialize_player(player):
+                return {
+                    'id': player.id,
+                    'name': player.user.first_name,
+                    'email': player.user.email,
+                }
+
             return Response({
                 'message': 'Bidding started',
-                'current_bidder': current_bidder_hand.player.id,  
-                'next_bidder': next_bidder_hand.player.id,
+                'current_bidder': serialize_player(current_bidder_hand.player),  
+                'next_bidder': serialize_player(next_bidder_hand.player),
             }, status=status.HTTP_201_CREATED)
+        
 
         except Instances.DoesNotExist:
             return Response({'error': 'Game instance not found'}, status=status.HTTP_404_NOT_FOUND)

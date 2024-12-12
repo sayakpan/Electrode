@@ -3,6 +3,7 @@
 from django.urls import path
 from django.urls import path
 from .views import (
+    GetInstanceAPIView,
     GameProfileAPIView,
     GetGameStatusAPIView,
     PlaceBidAPIView,
@@ -17,6 +18,7 @@ from .views import (
 urlpatterns = [
     path('profile/', GameProfileAPIView.as_view(), name='profile'),
     path('start/<slug:room_id>/', StartGameAPIView.as_view(), name='start_game'),
+    path('get-instance/<slug:room_id>/',GetInstanceAPIView.as_view(), name='get_instance'),
     path('get-game/<int:instance_id>/',GetGameStatusAPIView.as_view(), name='get_game'),
     path('bid/<int:instance_id>/', StartBiddingAPIView.as_view(), name='bid'),
     path('bidding/place/<int:instance_id>/', PlaceBidAPIView.as_view(), name='place_bid'),
