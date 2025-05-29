@@ -1,9 +1,11 @@
 # urls.py
 from django.urls import path
-from .views import GameRoomCreateView, GetGameRoomView, JoinGameRoomView
+from .views import GameRoomCreateView, GetGameRoomView, JoinGameRoomView, GetRoomByIdView
 
 urlpatterns = [
     path('create/', GameRoomCreateView.as_view(), name='game_room_create'),
     path('join/', JoinGameRoomView.as_view(), name='game_room_join'),
     path('<str:unique_id>/', GetGameRoomView.as_view(), name='get_game_room'),
+    path('active/<int:room_id>/', GetRoomByIdView.as_view(), name='get_room_by_id'),
+    
 ]

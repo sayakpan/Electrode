@@ -10,6 +10,7 @@ class Card(models.Model):
     short_name = models.CharField(max_length=2, null=True)
     image_url = models.ImageField(upload_to='cards/png/', null=True)  # PNG image
     svg_url = models.FileField(upload_to='cards/svg/', null=True)  # SVG file
+    card_back = models.ImageField(upload_to='cards/back/', null=True)
 
     def __str__(self):
         return f'{self.name} of {self.suit}'
