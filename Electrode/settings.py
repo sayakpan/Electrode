@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-r2su)zwvm-&f!&plx-qf^o606nk@vk(+_^(3doc!4gz#@7qs+a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['electrodegames.site', 'www.electrodegames.site', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['api.electrodegames.site', 'localhost', '127.0.0.1']
 
 
 # Application definition
