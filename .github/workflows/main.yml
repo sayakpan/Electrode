@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  Deploy-Backend:
+  Deploy_Backend:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,3 +26,4 @@ jobs:
             docker compose up -d backend
 
             docker image prune -f
+            docker ps 
