@@ -66,6 +66,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.electrodegames.site",
+]
+
 ROOT_URLCONF = 'Electrode.urls'
 
 TEMPLATES = [
