@@ -22,8 +22,8 @@ jobs:
             git pull origin main
 
             cd ..
-            docker compose build backend
-            docker compose up -d backend
+            docker-compose build backend
+            docker-compose up -d backend
 
             docker image prune -f
             docker ps 
